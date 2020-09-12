@@ -1,4 +1,4 @@
-TARGET = sig2hash
+TARGET = hash2sig
 
 CC = gcc
 CFLAGS = -Wall -Wextra -O3 -flto #-DDEBUG=1

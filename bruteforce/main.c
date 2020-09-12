@@ -4,6 +4,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <gmp.h>
+ 
+#define APP_REAL_KEY_EXP \
+  "8a8a15ffe28c79323c8988b06caf67fcc2" \
+  "a2cb132baf628f9501e6aa5e90933e0445" \
+  "5aca6419c58e892ec248b8411c3e3b4df4" \
+  "e0bc9653a938ca0faaa396996c342a1559" \
+  "4dc112fe7bee00025386846470a627ad13" \
+  "cd3fb4efb6d737746d811e1c28d9a1ac92" \
+  "a222deb2916fafc0d9a755e9b2e2e440c9" \
+  "d744c445ecf74ee496"
 
 #define APP_CUSTOM_KEY_EXP \
   "75f566e4f129d4e8bd54df7cb2758ebcba" \
@@ -56,18 +66,30 @@
   "4056437eb4610ec2d355650a4898daad4f" \
   "f0c97faf4d397ebdde091e6d2f00183e7f3d"
 
-#define APP_KEY_MOD APP_REAL_KEY_MOD
+#define KNOWN_BYTES (sizeof(APP_REAL_KEY_EXP) - 1) / 2
 
 void rand_str(char *dest)
 {
-    static char charset[] = "0123456789abcdef";
-    unsigned int length = 512;
+    unsigned int length = 512 - KNOWN_BYTES;
+
+    dest += KNOWN_BYTES;
 
     while (length--)
     {
-        *dest++ = charset[rand() & 15];
+        *dest++ = "0123456789abcdef"[rand() & 15];
     }
-    *dest = 0;
+}
+
+void fill_str(char *dest)
+{
+    unsigned int length = 512 - KNOWN_BYTES;
+
+    dest += KNOWN_BYTES;
+
+    while (length--)
+    {
+        *dest++ = '0';
+    }
 }
 
 int main(void)
@@ -81,20 +103,31 @@ int main(void)
     unsigned int count1 = 0;
     static char expstr[513];
 
+    memset(expstr, 0, sizeof expstr);
+
     srand(time(NULL));
+
+#if TRY_REAL
+    strcpy(expstr, APP_REAL_KEY_EXP);
+    fill_str(expstr);
+    fprintf(stdout, "known bytes: %lu\n", KNOWN_BYTES);
+    fprintf(stdout, "known bits: %lu\n", KNOWN_BYTES * 8);
+#else
+    strcpy(expstr, APP_CUSTOM_KEY_EXP);
+#endif
 
     mpz_init(sig);
     mpz_init(exp);
     mpz_init(comphash);
-    //mpz_init_set_str(hash, "fe00cdf8b2ad3fee25ddb022f0d094dd2298ed3014a4d8aa556f25b8486e8c4e", 16);
     mpz_init_set_str(hash, "a43c003505d3dde28d2d653070646f926e3b1823e89446e57e38728f30eaee9e", 16);
-    mpz_init_set_str(mod, APP_KEY_MOD, 16);
+#if TRY_REAL
+    mpz_init_set_str(mod, APP_REAL_KEY_MOD, 16);
+#else
+    mpz_init_set_str(mod, APP_CUSTOM_KEY_MOD, 16);
+#endif
 
     for (;;)
     {
-        rand_str(expstr);
-        //strcpy(expstr, APP_CUSTOM_KEY_EXP);
-
         mpz_set_str(exp, expstr, 16);
 
         mpz_powm(sig, hash, exp, mod);
@@ -110,12 +143,14 @@ int main(void)
 
         count0++;
 
-        if (count0 == 10000)
+        if (count0 == 1000)
         {
             count1++;
-            fprintf(stdout, "tried 10 thousand random exponents: %u\n", count1);
+            fprintf(stdout, "tried %u thousand random exponents\n", count1);
             count0 = 0;
         }
+
+        rand_str(expstr);
     }
 
     return 0;

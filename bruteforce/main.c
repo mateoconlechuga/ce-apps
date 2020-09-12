@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <gmp.h>
  
 #define APP_REAL_KEY_EXP \
@@ -102,14 +103,18 @@ int main(void)
     unsigned int count0 = 0;
     unsigned int count1 = 0;
     static char expstr[513];
+    unsigned int seed = clock();
 
     memset(expstr, 0, sizeof expstr);
 
-    srand(time(NULL));
+    srand(seed);
+    seed = rand();
+    srand(seed);
 
 #if TRY_REAL
     strcpy(expstr, APP_REAL_KEY_EXP);
     fill_str(expstr);
+    fprintf(stdout, "rand seed: %u\n", seed);
     fprintf(stdout, "known bytes: %lu\n", KNOWN_BYTES);
     fprintf(stdout, "known bits: %lu\n", KNOWN_BYTES * 8);
 #else
@@ -151,6 +156,11 @@ int main(void)
         }
 
         rand_str(expstr);
+    }
+
+    for (;;)
+    {
+        sleep(30);
     }
 
     return 0;

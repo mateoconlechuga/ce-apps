@@ -7,14 +7,7 @@
 #include <gmp.h>
  
 #define APP_REAL_KEY_EXP \
-  "8a8a15ffe28c79323c8988b06caf67fcc2" \
-  "a2cb132baf628f9501e6aa5e90933e0445" \
-  "5aca6419c58e892ec248b8411c3e3b4df4" \
-  "e0bc9653a938ca0faaa396996c342a1559" \
-  "4dc112fe7bee00025386846470a627ad13" \
-  "cd3fb4efb6d737746d811e1c28d9a1ac92" \
-  "a222deb2916fafc0d9a755e9b2e2e440c9" \
-  "d744c445ecf74ee496"
+  ""
 
 #define APP_CUSTOM_KEY_EXP \
   "75f566e4f129d4e8bd54df7cb2758ebcba" \

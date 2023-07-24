@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <gmp.h>
- 
+#include <stdint.h>
+
 #define APP_REAL_KEY_EXP \
   ""
 
@@ -62,77 +63,76 @@
 
 #define KNOWN_BYTES (sizeof(APP_REAL_KEY_EXP) - 1) / 2
 
-void rand_str(char *dest)
+static uint64_t mkseed(void)
 {
-    unsigned int length = 512 - KNOWN_BYTES;
-
-    dest += KNOWN_BYTES;
-
-    while (length--)
+    FILE *f = fopen("/dev/urandom", "rb");
+    if (f)
     {
-        *dest++ = "0123456789abcdef"[rand() & 15];
+        uint64_t seed;
+        size_t res;
+
+        setbuf(f, NULL);
+        res = fread(&seed, sizeof(seed), 1, f);
+        fclose(f);
+
+        if (res == 1)
+        {
+            return seed;
+        }
     }
-}
 
-void fill_str(char *dest)
-{
-    unsigned int length = 512 - KNOWN_BYTES;
-
-    dest += KNOWN_BYTES;
-
-    while (length--)
-    {
-        *dest++ = '0';
-    }
+    abort();
 }
 
 int main(void)
 {
     mpz_t sig;
     mpz_t exp;
+    mpz_t pube;
     mpz_t mod;
     mpz_t hash;
     mpz_t comphash;
-    unsigned int count0 = 0;
-    unsigned int count1 = 0;
-    static char expstr[513];
-    unsigned int seed = clock();
+    gmp_randstate_t state;
+    uint32_t count0 = 0;
+    uint64_t count1 = 0;
+    uint64_t seed;
 
-    memset(expstr, 0, sizeof expstr);
+    seed = mkseed();
 
-    srand(seed);
-    seed = rand();
-    srand(seed);
+    printf("gmp seed: %lu\n", seed);
 
-#if TRY_REAL
-    strcpy(expstr, APP_REAL_KEY_EXP);
-    fill_str(expstr);
-    fprintf(stdout, "rand seed: %u\n", seed);
-    fprintf(stdout, "known bytes: %lu\n", KNOWN_BYTES);
-    fprintf(stdout, "known bits: %lu\n", KNOWN_BYTES * 8);
-#else
-    strcpy(expstr, APP_CUSTOM_KEY_EXP);
-#endif
+    gmp_randinit_mt(state);
+    gmp_randseed_ui(state, seed);
 
     mpz_init(sig);
     mpz_init(exp);
+    mpz_init(pube);
     mpz_init(comphash);
+    mpz_init_set_str(pube, "3", 10);
     mpz_init_set_str(hash, "a43c003505d3dde28d2d653070646f926e3b1823e89446e57e38728f30eaee9e", 16);
+
 #if TRY_REAL
     mpz_init_set_str(mod, APP_REAL_KEY_MOD, 16);
+    mpz_urandomb(exp, state, 256);
 #else
     mpz_init_set_str(mod, APP_CUSTOM_KEY_MOD, 16);
+    mpz_set_str(exp, APP_CUSTOM_KEY_EXP, 16);
 #endif
 
     for (;;)
     {
-        mpz_set_str(exp, expstr, 16);
-
         mpz_powm(sig, hash, exp, mod);
-        mpz_powm_ui(comphash, sig, 3, mod);
+        mpz_powm(comphash, sig, pube, mod);
 
         if (mpz_cmp(hash, comphash) == 0)
         {
+            FILE *fd = fopen("exponent.txt", "wt");
+            if (fd)
+            {
+                mpz_out_str(fd, 16, exp);
+                fprintf(fd, "\n");
+                fclose(fd);
+            }
             fprintf(stdout, "found exponent!\n");
             mpz_out_str(stdout, 16, exp);
             fprintf(stdout, "\n");
@@ -144,16 +144,11 @@ int main(void)
         if (count0 == 1000)
         {
             count1++;
-            fprintf(stdout, "tried %u thousand random exponents\n", count1);
+            fprintf(stdout, "tried %lu random exponents\n", count1 * 1000);
             count0 = 0;
         }
 
-        rand_str(expstr);
-    }
-
-    for (;;)
-    {
-        sleep(30);
+        mpz_urandomb(exp, state, 256);
     }
 
     return 0;

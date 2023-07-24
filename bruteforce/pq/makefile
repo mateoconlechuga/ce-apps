@@ -1,7 +1,7 @@
 TARGET = bruteforce
 
 CC = gcc
-CFLAGS = -Wall -Wextra -O3 -flto -DTRY_REAL=0 #-DDEBUG=1
+CFLAGS = -Wall -Wextra -O3 -funroll-loops -fomit-frame-pointer -flto -DTRY_REAL=1 #-DDEBUG=1
 LDFLAGS = -flto
 
 OBJECTS := main.o

@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <time.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <gmp.h>
@@ -65,20 +66,44 @@
 
 #define KNOWN_BYTES (sizeof(APP_REAL_KEY_EXP) - 1) / 2
 
+static uint64_t mkseed(void)
+{
+    FILE *f = fopen("/dev/urandom", "rb");
+    if (f)
+    {
+        uint64_t seed;
+        size_t res;
+
+        setbuf(f, NULL);
+        res = fread(&seed, sizeof(seed), 1, f);
+        fclose(f);
+
+        if (res == 1)
+        {
+            return seed;
+        }
+    }
+
+    abort();
+}
+
 int main(void)
 {
     gmp_randstate_t state;
     mpz_t result;
     mpz_t mod;
     mpz_t p;
-
-#if TRY_REAL
-    unsigned int shift = clock() % 24;
-#endif
     unsigned int count0 = 0;
     unsigned int count1 = 0;
+    uint64_t seed;
+
+    seed = mkseed();
+
+    printf("gmp seed: %lu\n", seed);
 
     gmp_randinit_mt(state);
+    gmp_randseed_ui(state, seed);
+
     mpz_init(result);
 #if TRY_REAL
     mpz_init_set_str(mod, APP_REAL_KEY_MOD, 16);
@@ -113,7 +138,7 @@ int main(void)
             count0 = 0;
         }
 
-        mpz_urandomb(p, state, 1025);
+        mpz_urandomb(p, state, 1024);
     }
 
     for (;;)
